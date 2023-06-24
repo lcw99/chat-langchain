@@ -85,4 +85,5 @@ def get_chain(
         callbacks=manager.handlers,
         verbose=True,
     )
+    
     return qa

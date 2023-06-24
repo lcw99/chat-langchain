@@ -12,6 +12,9 @@ from callback import QuestionGenCallbackHandler, StreamingLLMCallbackHandler
 from query_data import get_chain
 from schemas import ChatResponse
 
+from urllib.request import urlopen
+import json
+
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 vectorstore: Optional[VectorStore] = None
@@ -26,6 +29,18 @@ async def startup_event():
         global vectorstore
         vectorstore = pickle.load(f)
 
+    DART_KEY = "0eb9d7eb5c3e5d1cc03806a54a23d30d621459bd"
+    coprCode = "01160363"
+    bsnsYear = 2022
+    reportCode = 11011 # 1분기보고서 : 11013, 반기보고서 : 11012, 3분기보고서 : 11014, 사업보고서 : 11011
+
+    url = f"https://opendart.fss.or.kr/api/fnlttSinglAcnt.json?crtfc_key={DART_KEY}&corp_code={coprCode}&bsns_year={bsnsYear}&reprt_code={reportCode}"
+    response = urlopen(url)
+    data = json.loads(response.read())
+    if (data['status'] == '000'):
+       accountData = data['list']
+       for d in accountData:
+           print(f"{d['account_nm']} {d['thstrm_amount']}") 
 
 @app.get("/")
 async def get(request: Request):
