@@ -1,7 +1,7 @@
 """Load html from files, clean up, split, ingest into Weaviate."""
 import pickle
 
-from langchain.document_loaders import ReadTheDocsLoader
+from langchain.document_loaders import ReadTheDocsLoader, UnstructuredPDFLoader
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores.faiss import FAISS
@@ -9,7 +9,8 @@ from langchain.vectorstores.faiss import FAISS
 
 def ingest_docs():
     """Get documents from web pages."""
-    loader = ReadTheDocsLoader("langchain.readthedocs.io/en/latest/")
+    # loader = ReadTheDocsLoader("langchain.readthedocs.io/en/latest/")
+    loader = UnstructuredPDFLoader("/home/chang/Downloads/삼성전자 사업보고서(2023.03.07).pdf")
     raw_documents = loader.load()
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
