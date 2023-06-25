@@ -116,7 +116,7 @@ async def websocket_endpoint(websocket: WebSocket):
     question_handler = QuestionGenCallbackHandler(websocket)
     stream_handler = StreamingLLMCallbackHandler(websocket)
     chat_history = []
-    qa_chain = get_chain(vectorstore, question_handler, stream_handler)
+    qa_chain = get_chain(corpText, question_handler, stream_handler)
     # Use the below line instead of the above line to enable tracing
     # Ensure `langchain-server` is running
     # qa_chain = get_chain(vectorstore, question_handler, stream_handler, tracing=True)
@@ -132,14 +132,8 @@ async def websocket_endpoint(websocket: WebSocket):
             start_resp = ChatResponse(sender="bot", message="", type="start")
             await websocket.send_json(start_resp.dict())
 
-            print(qa_chain.memory)
-            input = ""
-            if len(qa_chain.memory.chat_memory.messages) == 0:
-                input = f"{corpText}\n\n"
-            input += question
-            
             result = await qa_chain.acall(
-                {"input": input, "history": chat_history}
+                {"input": question, "history": chat_history}
             )
             chat_history.append((question, result["response"]))
 

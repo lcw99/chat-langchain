@@ -24,18 +24,16 @@ Follow Up Input: {question}
 Standalone question:"""
 CONDENSE_QUESTION_PROMPT = PromptTemplate.from_template(_template)
 
-prompt_template = """기업의 재무제표를 놓고 Human과 AI가 대화 중이다. AI는 기업분석 전문가의 입장에서 친절하고 상세하게 답변한다.
+prompt_template = """아래 기업의 재무제표를 놓고 Human과 AI가 대화 중이다. AI는 기업분석 전문가의 입장에서 친절하고 상세하게 답변한다.
+{corp_info}
 
 {history}
 Human:{input}
 AI:"""
-CONV_PROMPT = PromptTemplate(
-    template=prompt_template, input_variables=["history", "input"]
-)
 
 
 def get_chain(
-    vectorstore: VectorStore,
+    corpInfo: str,
     question_handler: AsyncCallbackHandler,
     stream_handler: AsyncCallbackHandler,
     tracing: bool = False,
@@ -85,7 +83,10 @@ def get_chain(
     #     callbacks=manager.handlers,
     #     verbose=True,
     # )
-    
+    global prompt_template
+    prompt_template = prompt_template.replace("{corp_info}", corpInfo)
+    CONV_PROMPT = PromptTemplate(template=prompt_template, input_variables=["history", "input"])
+
     qa = ConversationChain(
         memory=ConversationBufferMemory(),
         llm=streaming_llm,

@@ -6,7 +6,7 @@
     <link href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css" rel="stylesheet">
     <style>
         .chat-body {
-            width: 1000px;
+            width: 90%;
             margin: 50px auto;
         }
         .card-body {
@@ -21,7 +21,7 @@
             border-radius: 10px;
         }
         .client-message {
-            background-color: #555;
+            background-color: #888;
             padding: 10px;
             margin: 10px;
             border-radius: 10px;
@@ -51,6 +51,7 @@
         }
     </style>
     <script>
+        var icon = '<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tabler-icon tabler-icon-user"><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0"></path><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"></path></svg>';
         var endpoint = "ws://localhost:9000/chat";
         var ws = new WebSocket(endpoint);
         // Receive message from server word by word. Display the words as they are received.
@@ -64,18 +65,16 @@
                     var div = document.createElement('div');
                     div.className = 'server-message';
                     var p = document.createElement('p');
-                    p.innerHTML = "<strong>" + "Chatbot: " + "</strong>";
+                    p.innerHTML = "";
                     div.appendChild(p);
                     messages.appendChild(div);
                 } else if (data.type === "stream") {
                     var header = document.getElementById('header');
                     header.innerHTML = "Chatbot is typing...";
                     var p = messages.lastChild.lastChild;
-                    if (data.message === "\n") {
-                        p.innerHTML += "<br>";
-                    } else {
-                        p.innerHTML += data.message;
-                    }
+                    // console.log(data.message)
+                    var mm = data.message.replace("\n", "<br>");
+                    p.innerHTML += mm;
                 } else if (data.type === "info") {
                     var header = document.getElementById('header');
                     header.innerHTML = data.message;
@@ -95,11 +94,13 @@
                     p.innerHTML += data.message;
                 }
             } else {
+                var divIcon = document.createElement('div');
+                divIcon.innerHTML = icon;
                 var div = document.createElement('div');
                 div.className = 'client-message';
-                var p = document.createElement('p');
-                p.innerHTML = "<strong>" + "You: " + "</strong>";
-                p.innerHTML += data.message;
+                var p = document.createElement('div');
+                p.innerHTML = data.message;
+                // div.appendChild(divIcon);
                 div.appendChild(p);
                 messages.appendChild(div);
             }
@@ -126,10 +127,10 @@
 <body class="bg-black">
     <div class="chat-body card">
         <div class="card-body p-5">
-            <h4 class="card-title text-center text-xl font-medium"> Chat Your Data </h4>
+            <h4 class="card-title text-center text-xl font-medium"> Chat With Financial Statements </h4>
             <p class="card-text text-center text-sm" id="header"> Ask a question </p>
             <hr class="border-gray-500 mb-5" style="margin-top: 20px;">
-            <div id="messages" class="overflow-auto" style="max-height: 500px;">
+            <div id="messages" class="overflow-auto" style="max-height: 70vh;">
             </div>
             <form action="" class="form-inline mt-5" id="chat-form" onsubmit="sendMessage(event)">
                 <input type="text" class="form-control" placeholder="Write your question" id="messageText">
