@@ -32,6 +32,13 @@ async def startup_event():
         global vectorstore
         vectorstore = pickle.load(f)
 
+    global corpText
+    if Path("corpinfo.txt").exists():
+        with open("corpinfo.txt", "r") as f:
+            corpText = f.read()
+        print(corpText)
+        return
+
     DART_KEY = "0eb9d7eb5c3e5d1cc03806a54a23d30d621459bd"
     coprCode = "01160363"
     quaterDict = {"11013": "Q1", "11012": "Q2", "11014": "Q3", "11011": "Final"}
@@ -84,7 +91,6 @@ async def startup_event():
                             else:
                                 dataArrayQuarter[accountName][f"{year}.Q4"] = dataArrayQuarter[accountName][f"{year}.Final"]
                     # print(f"{yearQ} {accountName} {d['thstrm_amount']}") 
-    global corpText
     corpText = f"요약재무제표(단위: 백만원)\n"
     corpText += "계정과목\t" + "\t".join(yearQColumns) + "\n"
     for an in dataArrayQuarter.keys():
@@ -96,6 +102,8 @@ async def startup_event():
                 line += "NA\t"
         corpText += f"{an}\t{line.strip()}\n"
     print(corpText)
+    with open("corpinfo.txt", "w") as f:
+        f.write(corpText)
 
 @app.get("/")
 async def get(request: Request):
@@ -124,10 +132,16 @@ async def websocket_endpoint(websocket: WebSocket):
             start_resp = ChatResponse(sender="bot", message="", type="start")
             await websocket.send_json(start_resp.dict())
 
+            print(qa_chain.memory)
+            input = ""
+            if len(qa_chain.memory.chat_memory.messages) == 0:
+                input = f"{corpText}\n\n"
+            input += question
+            
             result = await qa_chain.acall(
-                {"question": question, "chat_history": chat_history}
+                {"input": input, "history": chat_history}
             )
-            chat_history.append((question, result["answer"]))
+            chat_history.append((question, result["response"]))
 
             end_resp = ChatResponse(sender="bot", message="", type="end")
             await websocket.send_json(end_resp.dict())
