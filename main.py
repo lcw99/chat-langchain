@@ -14,11 +14,14 @@ from schemas import ChatResponse
 
 from urllib.request import urlopen
 import json
+from datetime import datetime
+import pandas as pd
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 vectorstore: Optional[VectorStore] = None
 
+corpText = ""
 
 @app.on_event("startup")
 async def startup_event():
@@ -31,16 +34,68 @@ async def startup_event():
 
     DART_KEY = "0eb9d7eb5c3e5d1cc03806a54a23d30d621459bd"
     coprCode = "01160363"
-    bsnsYear = 2022
-    reportCode = 11011 # 1분기보고서 : 11013, 반기보고서 : 11012, 3분기보고서 : 11014, 사업보고서 : 11011
-
-    url = f"https://opendart.fss.or.kr/api/fnlttSinglAcnt.json?crtfc_key={DART_KEY}&corp_code={coprCode}&bsns_year={bsnsYear}&reprt_code={reportCode}"
-    response = urlopen(url)
-    data = json.loads(response.read())
-    if (data['status'] == '000'):
-       accountData = data['list']
-       for d in accountData:
-           print(f"{d['account_nm']} {d['thstrm_amount']}") 
+    quaterDict = {"11013": "Q1", "11012": "Q2", "11014": "Q3", "11011": "Final"}
+    yearQColumns = []
+    years = []
+    #dataArrayYear = {}
+    dataArrayQuarter = {}
+    accountAccumulation = {}
+    for bsnsYear in range(2015, datetime.now().year + 1):
+        for reportCode in ["11013", "11012", "11014", "11011"]: # 1분기보고서 : 11013, 반기보고서 : 11012, 3분기보고서 : 11014, 사업보고서 : 11011
+            url = f"https://opendart.fss.or.kr/api/fnlttSinglAcnt.json?crtfc_key={DART_KEY}&corp_code={coprCode}&bsns_year={bsnsYear}&reprt_code={reportCode}&fs_div=CFS"
+            # url = f"https://opendart.fss.or.kr/api/fnlttSinglAcntAll.json?crtfc_key={DART_KEY}&corp_code={coprCode}&bsns_year={bsnsYear}&reprt_code={reportCode}&fs_div=CFS"
+            response = urlopen(url)
+            data = json.loads(response.read())
+            print(f"{data['status']=}")
+            if (data['status'] == '000'):
+                year = str(bsnsYear)
+                years.append(year)
+                quater = quaterDict[reportCode]
+                yearQ = f"{year}.{quater}"
+                print(f"{yearQ=}")
+                if yearQ not in yearQColumns:
+                    if quater == "Final":
+                        yearQColumns.append(f"{year}.Q4") 
+                    else:
+                        yearQColumns.append(f"{year}.{quater}") 
+                accountData = data['list']
+                for d in accountData:
+                    if d['fs_div'] != 'OFS':    # CFS: 연결재무제표, OFS: 재무제표
+                        continue
+                    isIS = d['sj_div'] == 'IS'
+                    accountName = d['account_nm']
+                    accountValue = d['thstrm_amount']
+                    accKey = f"{accountName}.{year}"
+                    if accountValue != '':
+                        accountValueMil = int(int(accountValue.replace(",", "")) / 1000000)
+                        if accKey not in accountAccumulation.keys():
+                            accountAccumulation[accKey] = 0
+                        if isIS and quater != "Final":
+                            accountAccumulation[accKey] += accountValueMil
+                    else:
+                        accountValueMil = "NA"
+                    if accountName not in dataArrayQuarter.keys():
+                        dataArrayQuarter[accountName] = {}
+                    dataArrayQuarter[accountName][f"{year}.{quater}"] = accountValueMil
+                    if quater == 'Final':
+                        if f"{year}.Q1" in yearQColumns and f"{year}.Q2" in yearQColumns and f"{year}.Q3" in yearQColumns:
+                            if isIS:
+                                dataArrayQuarter[accountName][f"{year}.Q4"] = accountValueMil - accountAccumulation[accKey]
+                            else:
+                                dataArrayQuarter[accountName][f"{year}.Q4"] = dataArrayQuarter[accountName][f"{year}.Final"]
+                    # print(f"{yearQ} {accountName} {d['thstrm_amount']}") 
+    global corpText
+    corpText = f"요약재무제표(단위: 백만원)\n"
+    corpText += "계정과목\t" + "\t".join(yearQColumns) + "\n"
+    for an in dataArrayQuarter.keys():
+        line = ""
+        for yq in yearQColumns:
+            if yq in dataArrayQuarter[an].keys():
+                line += str(dataArrayQuarter[an][yq]) + "\t"
+            else:
+                line += "NA\t"
+        corpText += f"{an}\t{line.strip()}\n"
+    print(corpText)
 
 @app.get("/")
 async def get(request: Request):
